@@ -1,10 +1,21 @@
+// Connect to the WiFi
+
+
+#include <ESP8266WiFi.h>
+#include <PubSubClient.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
 
+#define ONE_WIRE_BUS 2
+#define TRIGGER 5
+#define ECHO 4
 
+const char* ssid = "****";
+const char* password = "****";
+const char* mqtt_server = "67.205.148.211";
 
 // temp Data wire is plugged into pin 2 on the Arduino
-#define ONE_WIRE_BUS 2
+
 
 // Setup a oneWire instance to communicate with any OneWire devices 
 // (not just Maxim/Dallas temperature ICs)
@@ -15,8 +26,7 @@ DallasTemperature sensors(&oneWire);
 
 //define distance variables
 
-#define TRIGGER 5
-#define ECHO 4
+
  
 
 void setup() {
@@ -59,9 +69,4 @@ void loop() {
   Serial.print(distance);
   Serial.println("Centimeter:");
   delay(1000);
-  
- 
-
-    
- 
 }
