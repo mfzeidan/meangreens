@@ -1,2 +1,14 @@
 
 db.plantsdb2.find({"tray":"1"},{ "temp":1 ,_id:0})
+
+use plantdb2
+
+db.plantsdb2.find({"tray":"1"},{ "temp":1 })
+
+> db.plantsdb2.find({"tray":"1"},{ "temp":1 ,"tray":1,_id:0})
+
+
+
+
+
+
