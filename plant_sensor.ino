@@ -80,11 +80,11 @@ void callback(char* topic, byte* payload, unsigned int length) {
  for (int i=0;i<length;i++) {
   char receivedChar = (char)payload[i];
   Serial.print(receivedChar);
-  if (receivedChar == '0')
+  //if (receivedChar == '0')
   // ESP8266 Huzzah outputs are "reversed"
-  digitalWrite(ledPin, HIGH);
-  if (receivedChar == '1')
-   digitalWrite(ledPin, LOW);
+ // digitalWrite(ledPin, HIGH);
+  //if (receivedChar == '1')
+   //digitalWrite(ledPin, LOW);
   }
   Serial.println();
 }
@@ -135,6 +135,7 @@ void loop() {
   Serial.print(distance);
   Serial.println("Centimeter:");
   delay(1000);
-  pubMQTT(topic1, message);
+  
+  pubMQTT(topic1, String(distance));
 
 }
