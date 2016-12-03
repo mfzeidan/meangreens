@@ -9,7 +9,7 @@
 #define mqtt_server "104.236.210.175" //fill this
 #define mqtt_user "" // no fill necessary
 #define mqtt_password "" // no fill necessary
-#define topic1 "test"
+#define topic1 "testing1"
 #define mqtt_client_name "EAS1" //this needs to be unique for each unit
 WiFiClient espClient;
 PubSubClient client(espClient);
@@ -103,7 +103,7 @@ void loop() {
   Serial.println(faren);
   delay(1000);  
 
-  String message_to_send = String("{") + String("\"DeviceInfo\"") + String(":[{\"DeviceID\":\"") +  String(device_id) + "\", \"Moisture\":\"" + String(humidityReal) + "\", \"temp\":\"" + String(faren) + "\"}]}";
+  String message_to_send =  String("{\"DeviceID\":\"") +  String(device_id) + "\", \"Moisture\":\"" + String(humidityReal) + "\", \"Temperature\":\"" + String(faren) + "\"}";
   Serial.println(message_to_send);
   pubMQTT(topic1, String(message_to_send));
   delay(10000);
