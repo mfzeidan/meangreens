@@ -9,6 +9,7 @@ db.plantsdb2.find({"tray":"1"},{ "temp":1 })
 
 db.soil_cond.find({"DeviceID":"1"},{"datetime":1,_id:0}).sort({"datetime":1}).limit(1)
 
+> db.soil_cond.find().sort({"datetime":-1}).limit(1)
 
 
 
