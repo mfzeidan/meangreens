@@ -106,6 +106,5 @@ void loop() {
   String message_to_send =  String("{\"DeviceID\":\"") +  String(device_id) + "\", \"Moisture\":\"" + String(humidityReal) + "\", \"Temperature\":\"" + String(faren) + "\"}";
   Serial.println(message_to_send);
   pubMQTT(topic1, String(message_to_send));
-  delay(10000);
+  delay(3000 );
 }
-
