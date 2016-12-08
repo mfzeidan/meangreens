@@ -21,9 +21,12 @@ String device_id = "001";
 String start_datetime = "";
 String current_datetime = "";
 String newgrow_flag = "";
-String plant_height = "";
+String plant_height = "0";
 const int buttonPin = 2;     // the number of the pushbutton pin
 int buttonState = 0;         // variable for reading the pushbutton status
+
+String reset_message = """asda""";
+
 
 // Setup a oneWire instance to communicate with any OneWire devices (not just Maxim/Dallas temperature ICs)
 OneWire oneWire(ONE_WIRE_BUS);
@@ -93,6 +96,12 @@ void loop() {
   if (buttonState == HIGH) {
     // turn LED on:
     String newgrow_flag = "1";
+
+    //CONSIDER JUST SENDING A COMPLETE RESET JSON MESSAGE THE RESET THE WHOLE PROCESS THAT INCLUDES THE DEVICEID
+    //NEWFLAG = 1
+    //SET TEMP, PLANT HEIGHT, SOILMOISTURE TO 0
+
+    
   } else  {
 
     String newgrow_flag = "0";
