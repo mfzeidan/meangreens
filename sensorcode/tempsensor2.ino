@@ -8,14 +8,17 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 
-// Data wire is plugged into pin 3 on the Arduino
-#define ONE_WIRE_BUS 2
+// Data wire is plugged into pin 5 on the Arduino
+#define ONE_WIRE_BUS 5
 
 // Setup a oneWire instance to communicate with any OneWire devices
 OneWire oneWire(ONE_WIRE_BUS);
 
 // Pass our oneWire reference to Dallas Temperature. 
 DallasTemperature sensors(&oneWire);
+
+int environment = 1;
+
 
 // Assign the unique addresses of your 1-Wire temp sensors.
 // See the tutorial on how to obtain these addresses:
@@ -56,13 +59,22 @@ void loop(void)
   Serial.print("Getting temperatures...\n\r");
   sensors.requestTemperatures();
   
-  Serial.print("Inside temperature is: ");
+  Serial.print("Inside  temperature is: ");
   printTemperature(insideThermometer);
   Serial.print("\n\r");
   Serial.print("Outside temperature is: ");
-  printTemperature(outsideThermometer);
+  float outside_tempC = sensors.getTempC(outsideThermometer);
+  float outside_tempF = DallasTemperature::toFahrenheit(outside_tempC);
+  float inside_tempC = sensors.getTempC(insideThermometer);
+  float inside_tempF = DallasTemperature::toFahrenheit(inside_tempC);
+  
+  //int indoor = tempC;
   Serial.print("\n\r");
   //Serial.print("Dog House temperature is: ");
   //printTemperature(dogHouseThermometer);
   Serial.print("\n\r\n\r");
+
+  String message_to_send1 = String("{\"Environment\":") +  String(environment) + ", \"IndoorTemp\":" + inside_tempF + ",\"OutdoorTemp\":" + outside_tempF + "}";                                                            
+
+  Serial.println(message_to_send1);
 }
