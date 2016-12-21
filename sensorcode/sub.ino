@@ -1,5 +1,6 @@
 #include <PubSubClient.h>
 #include <ESP8266WiFi.h>
+#include <ArduinoJson.h>
 
 //////////////////////////Added toggling led with any topic publish "1"  /////
  
@@ -11,8 +12,10 @@ char* server = "104.236.210.175";  // Address of my server on my network, substi
  
 char message_buff[100];   // initialise storage buffer (i haven't tested to this capacity.)
 
+int message_to_print = 76;
 
-
+char json[] = "";
+  StaticJsonBuffer<200> jsonBuffer;
 
 WiFiClient wifiClient;
 
@@ -33,7 +36,23 @@ void callback(char* topic, byte* payload, unsigned int length) {
   
   Serial.println("Payload: " + msgString);
   int state = digitalRead(2);  // get the current state of GPIO1 pin
+
+  Serial.println(message_to_print);
+
+///here is where we will parse the json message that's being received to update all variables once a message is received
+  
+  JsonObject& root = jsonBuffer.parseObject(msgString);
+
+  const char* sensor = root["temp"];
+  Serial.println("test"); 
+  Serial.println(sensor);
+  
+  
   if (msgString == "1"){    // if there is a "1" published to any topic (#) on the broker then:
+ message_to_print = 78;
+ Serial.println(message_to_print);  
+
+    
     digitalWrite(2, !state);     // set pin to the opposite state 
     Serial.println("Switching LED"); 
   }
@@ -66,6 +85,8 @@ void setup() {
   Serial.println();
   Serial.print("Connecting to ");
   Serial.println(ssid);
+  StaticJsonBuffer<200> jsonBuffer;
+
   
   WiFi.begin(ssid, password);
   
@@ -88,7 +109,9 @@ void setup() {
 void loop() {
 
   client.loop();
+  Serial.println(message_to_print);
+  delay(10000);
+  
 }
-
 
 
