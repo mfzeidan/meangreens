@@ -14,7 +14,7 @@ char message_buff[100];   // initialise storage buffer (i haven't tested to this
 
 int message_to_print = 76;
 
-char json[] = "";
+//char json[] = "";
   StaticJsonBuffer<200> jsonBuffer;
 
 WiFiClient wifiClient;
@@ -43,14 +43,26 @@ void callback(char* topic, byte* payload, unsigned int length) {
   
   JsonObject& root = jsonBuffer.parseObject(msgString);
 
+  const char* sensor1 = root["DeviceID"];
+  const char* sensor2 = root["newgrow_flag"];
+  const char* sensor3 = root["Moisture"];
+  const char* sensor4 = root["temp"];
+
+
   const char* sensor = root["temp"];
-  Serial.println("test"); 
-  Serial.println(sensor);
+
+ // Serial.println(root);
   
+  Serial.println("test"); 
+  Serial.println(sensor1);
+  Serial.println(sensor2);
+  Serial.println(sensor3);
+  Serial.println(sensor4);
+        
   
   if (msgString == "1"){    // if there is a "1" published to any topic (#) on the broker then:
- message_to_print = 78;
- Serial.println(message_to_print);  
+   message_to_print = 78;
+   Serial.println(message_to_print);  
 
     
     digitalWrite(2, !state);     // set pin to the opposite state 
