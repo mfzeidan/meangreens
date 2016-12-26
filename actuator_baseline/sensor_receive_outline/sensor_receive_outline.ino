@@ -17,10 +17,10 @@ DallasTemperature sensors(&oneWire);
 //////////////////////////Added toggling led with any topic publish "1"  /////
 
  //setting up environmental variables
-//const char* ssid = "Verizon-SCH-I545-4A6B";
-//const char* password = "qama598#";
-const char* ssid = "9a8fc8";
-const char* password = "278993750";
+//const char* ssid = ".....";
+//const char* password = ".....#";
+const char* ssid = ".....";
+const char* password = ".....";
 char* topic = "test";     //  using wildcard to monitor all traffic from mqtt server
 char* server = "159.203.102.9";  // Address of my server on my network, substitute yours!
 char message_buff[100];   // initialise storage buffer (i haven't tested to this capacity.)
@@ -45,8 +45,6 @@ WiFiClient wifiClient;
 //TODO: make this function much better, feels too hacky
 
 void callback(char* topic, byte* payload, unsigned int length) {
-
-  
     StaticJsonBuffer<200> jsonBuffer;
   // Here is what i have been using to handle subscriptions. I took it as a snippet from elsewhere but i cannot credit author as i dont have reference!
     int i = 0;
