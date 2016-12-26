@@ -1,0 +1,1 @@
+this code is the baseline to allow the sensor to both subscribe to any messages coming to it as well as parsing the respective JSON that is coming into it and replacing it with a hardcoded variable currently in the sensor 
