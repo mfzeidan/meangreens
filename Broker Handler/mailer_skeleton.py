@@ -4,8 +4,10 @@ from email.MIMEMultipart import MIMEMultipart
 from email.MIMEText import MIMEText
 
 
-def mail_to_send_2(to_email,from_email, subject, body, pw ):
+def mail_to_send(to_email, subject, body):
 
+
+	from_email = "smokertempmail@gmail.com"
 	fromaddr = from_email
 	toaddr = to_email
 	msg = MIMEMultipart()
@@ -20,7 +22,7 @@ def mail_to_send_2(to_email,from_email, subject, body, pw ):
 	server.ehlo()
 	server.starttls()
 
-	server.login(fromaddr, pw)
+	server.login(fromaddr, '.....')
 	text = msg.as_string()
 	server.sendmail(from_email, to_email, text)
 	server.quit()
@@ -29,4 +31,6 @@ def mail_to_send_2(to_email,from_email, subject, body, pw ):
 #mail_to_send(70)
 
 
-mail_to_send_2("mfzeidan@gmail.com","smokertempmail@gmail.com","hello","hello",".....")
+
+
+
