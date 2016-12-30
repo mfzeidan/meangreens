@@ -29,4 +29,4 @@ def mail_to_send_2(to_email,from_email, subject, body, pw ):
 #mail_to_send(70)
 
 
-mail_to_send_2("mfzeidan@gmail.com","smokertempmail@gmail.com","hello","hello","44sdsdsdSD")
+mail_to_send_2("mfzeidan@gmail.com","smokertempmail@gmail.com","hello","hello",".....")
