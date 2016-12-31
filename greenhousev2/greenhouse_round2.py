@@ -93,15 +93,15 @@ def on_message(mqttc, obj, msg):
 		# humidity of environment, target table 
 	
 	#print thedate
-	sqldata = 'INSERT INTO %s VALUES(%s,%s,%s,%s)' % (target_table,environment, SM, datetime_val, ts)
+	sqldata = 'INSERT INTO %s VALUES(%s,%s,%s)' % (target_table, SM, datetime_val, ts)
 	print sqldata
-	#try:
-	cur.execute(sqldata)
-	con.commit()
-	print "committed"
-	#except:
-	#con.rollback()
-	#print "nope"
+	try:
+		#cur.execute(sqldata)
+		#con.commit()
+		print "committed"
+	except:
+		con.rollback()
+		print "nope"
 	con.close()
 	#print "that works"
 	#except:
