@@ -1,6 +1,7 @@
 
 
 
+
 /*
  * written by mz
  * the goal of this script is to accomplish the following tasks
@@ -304,6 +305,8 @@ void setup() {
 //relay control for temperature control pad -relay added
 //code to read soil sensor
 //code for the LEDS CHECK but need to edit input pins for the LEDS
+
+
 
 
 
