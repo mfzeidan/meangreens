@@ -1,46 +1,32 @@
 
-//  This Arduino sketch reads DS18B20 "1-Wire" digital
-//  temperature sensors.
-//  Copyright (c) 2010 Mark McComb, hacktronics LLC
-//  License: http://www.opensource.org/licenses/mit-license.php (Go crazy)
-//  Tutorial:
-//  http://www.hacktronics.com/Tutorials/arduino-1-wire-tutorial.html
 
 #include <OneWire.h>
 #include <DallasTemperature.h>
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
-#include "DHT.h"
 
 
-#define light1_on_indicator 5
-#define light1_off_indicator 4
-#define light2_wifi_connected_indicator 2 
-#define light2_wifi_not_connected_indicator 14 
-#define light3_growing_progress_on_light 12
-#define light3_growing_progress_off_light 13
+
+int light1_on_indicator = 5;
+int light1_off_indicator =4;
+int light2_wifi_connected_indicator =2;
+int light2_wifi_not_connected_indicator =14;
+int light3_growing_progress_on_light =12;
+int light3_growing_progress_off_light =13;
 int light4_mqtt_on_light = 12; // green
-#define light5_mqtt_off_light 131 // red
+int light4_mqtt_off_light = 131; // red
 
-#define temp_relay_switch  15
-#define current_temperature
-#define desired_temperature
+int temp_relay_switch = 15;
+int current_temperature=77;
+int desired_temperature=77;
 // Data wire is plugged into pin 5 on the Arduino
-#define ONE_WIRE_BUS 9
+int ONE_WIRE_BUS= 9;
 
 String pin = "";
 
 
 //nodeMCU pins we can use - 5,4,2, 14,12,13,15,3,1,10,9
-
-//COMMENT WHERE DHTGOES
-#define DHTPIN 2     // what digital pin we're connected to
-
-// Uncomment whatever type you're using!
-#define DHTTYPE DHT11   // DHT 11
-
-DHT dht(DHTPIN, DHTTYPE);
 
 // Data wire is plugged into pin 5 on the Arduino
 #define ONE_WIRE_BUS 5
@@ -98,15 +84,30 @@ void setup_wifi() {
     delay(10);
     // We start by connecting to a WiFi network
     Serial.println();
+//making sure the connected light has been turned off
+    digitalWrite(light2_wifi_connected_indicator,LOW);
     Serial.print("Connecting to ");
     Serial.println(wifi_ssid);
     WiFi.begin(wifi_ssid, wifi_password);
     while (WiFi.status() != WL_CONNECTED) {
-        delay(500);
-        Serial.print(".");
+      //turn on the RED wifi light showing that wifi is not connected
+     digitalWrite(light2_wifi_not_connected_indicator, HIGH);
+      delay(500);
+      Serial.print(".");
+
     }
     Serial.println("");
     Serial.println("WiFi connected");
+    
+  //turn off the RED wifi 
+  //turn on the GREEN wifi light
+
+    digitalWrite(light2_wifi_not_connected_indicator, LOW);
+
+    //after we turn off the red light lets blink the green light and then leave it high
+    light_on_off(light2_wifi_connected_indicator);
+    delay(10);
+    digitalWrite(light2_wifi_connected_indicator, HIGH);    
     Serial.println("IP address: ");
     Serial.println(WiFi.localIP());
 }
@@ -114,11 +115,24 @@ void setup_wifi() {
 void reconnect() {
     // Loop until we're reconnected
     while (!client.connected()) {
+
+      digitalWrite(light4_mqtt_on_light,LOW); // green
+      digitalWrite(light4_mqtt_off_light,HIGH); // red
+
+
         Serial.print("Attempting MQTT connection...");
         // Attempt to connect
         if (client.connect(mqtt_client_name)) { //* See //NOTE below
             Serial.println("connected");
+            //once we're connected back to the server lets turn the greenlight on and the redlight off
+              digitalWrite(light4_mqtt_off_light,LOW);
+              light_on_off(light4_mqtt_on_light);
+              digitalWrite(light4_mqtt_off_light,HIGH);
+
         } else {
+          //else we leave the red light on and make sure the green light is off
+            digitalWrite(light4_mqtt_off_light,HIGH);
+            digitalWrite(light4_mqtt_on_light,LOW);
             Serial.print("failed, rc=");
             Serial.print(client.state());
             Serial.println(" try again in 5 seconds");
@@ -145,6 +159,8 @@ void light_on_off(int pin){
       delay(300);
       digitalWrite(pin, LOW);
       delay(300);
+      digitalWrite(pin, HIGH);
+
 }
 
 
@@ -155,12 +171,6 @@ void pubMQTT(String topic,String topic_val){
     //turn on a green light to signify that the message has been sent
     light_on_off(light4_mqtt_on_light);
 }
-
-
-
-
-
-
 
 
 
@@ -190,7 +200,7 @@ void setup(void)
   sensors.setResolution(insideThermometer, 10);
   sensors.setResolution(outsideThermometer, 10);
   //sensors.setResolution(dogHouseThermometer, 10);
-  dht.begin();
+
 }
 
 void printTemperature(DeviceAddress deviceAddress)
@@ -239,54 +249,7 @@ void loop(void)
   Serial.println("Wetness");
   Serial.println(moisture);
 
-////////////////////////////////////////////////////////////
-  delay(2000);
-
-  // Reading temperature or humidity takes about 250 milliseconds!
-  // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
-  float h = dht.readHumidity();
-  // Read temperature as Celsius (the default)
-  float t = dht.readTemperature();
-  // Read temperature as Fahrenheit (isFahrenheit = true)
-  float f = dht.readTemperature(true);
-
-  // Check if any reads failed and exit early (to try again).
- if (isnan(h) || isnan(t) || isnan(f)) {
-   Serial.println("Failed to read from DHT sensor!");
-    //return;
-  }
-
-    // Compute heat index in Fahrenheit (the default)
-  float hif = dht.computeHeatIndex(f, h);
-  // Compute heat index in Celsius (isFahreheit = false)
-  float hic = dht.computeHeatIndex(t, h, false);
-
-  Serial.print("Humidity: ");
-  Serial.print(h);
-  Serial.print(" %\t");
-  Serial.print("Temperature: ");
-  Serial.print(t);
-  Serial.print(" *C ");
-  Serial.print(f);
-  Serial.print(" *F\t");
-  Serial.print("Heat index: ");
-  Serial.print(hic);
-  Serial.print(" *C ");
-  Serial.print(hif);
-  Serial.println(" *F");
-
 //////////////////////////////////////////////////
-
-
-  String message_to_send1 = String("{\"Environment\":") +  
-    String(environment) + 
-    ", \"IndoorTemp\":" + inside_tempF +
-    ", \"Soil_Moisture\":" + moisture +
-    ", \"OutdoorTemp\":" + outside_tempF +
-    ", \"Humidity\":" + String(0) +
-    ",\"Table_Direction\":" + "\"" + table_direction +
-    "\"" + "}";   
-
     
   String message_to_send2 = String("{\"Environment\":") +  
     String(environment) + 
@@ -296,7 +259,7 @@ void loop(void)
     ", \"ID\":" + sensorID +
     ", \"Hum\":" + String(0) + ",\"TD\":" + "\"" + table_direction +
     "\"" + "}";   
-
+//////////////////////////////////////
                                                              
 
   Serial.println(message_to_send2);
@@ -308,4 +271,5 @@ void loop(void)
   delay(50000);
   
 }
+
 
