@@ -88,11 +88,9 @@ DeviceAddress outsideThermometer = { 0x28, 0x91, 0x37, 0xDD, 0x06, 0x00, 0x00, 0
 StaticJsonBuffer<200> jsonBuffer;
 
 
-
-
 void light_on_off(int pin){
       digitalWrite(pin, LOW);
-      delay(500);
+      delay(300);
        digitalWrite(pin, HIGH);
       delay(300);
       digitalWrite(pin, LOW);
@@ -108,8 +106,6 @@ void light_on_off(int pin){
       digitalWrite(pin, HIGH);
 
 }
-
-
 
 void printTemperature(DeviceAddress deviceAddress)
 {
@@ -147,15 +143,15 @@ void callback(char* topic, byte* payload, unsigned int length) {
 ///here is where we will parse the json message that's being received to update all variables once a message is received
   JsonObject& root = jsonBuffer.parseObject(msgString);
 
-  const char* temperature = root["temperature"];
-  const char* humidity = root["humidity"];
-  const char* light = root["light"];
-  const char* progress_flag = root["inprogress"];
+  const char* desired_temperature = root["desired_temperature"];
+  //const char* humidity = root["humidity"];
+  //const char* light = root["light"];
+  const char* progress_flag = root["progress_flag"];
  // Serial.println(root);
   //Serial.println("test");
-  Serial.println(temperature);
-  Serial.println(humidity);
-  Serial.println(light);
+  Serial.println(desired_temperature);
+  //Serial.println(humidity);
+  //Serial.println(light);
   Serial.println(progress_flag);
 
   //flag 1 signifies that there is currently a grow cycle in progress
@@ -173,9 +169,6 @@ void callback(char* topic, byte* payload, unsigned int length) {
        
 }
 
-
-
-
 PubSubClient client(server, 1883, callback, wifiClient);
  
 String macToStr(const uint8_t* mac)
@@ -188,8 +181,6 @@ String macToStr(const uint8_t* mac)
   }
   return result;
 }
-
-
 
 
 void setup() {
@@ -216,6 +207,7 @@ void setup() {
     digitalWrite(light2_wifi_connected_indicator,LOW);
     digitalWrite(light3_growing_progress_on_light,LOW);
     digitalWrite(light4_mqtt_on_light,LOW);
+    digitalWrite(temp_relay_switch, LOW);
             /////////
 
   Serial.println();
@@ -253,16 +245,12 @@ void setup() {
 
   // put your main code here, to run repeatedly:
   void loop() {
-
   client.loop();
   Serial.println(message_to_print);
   delay(1000);
   ////////////
-
-
   Serial.print("Getting temperatures...\n\r");
   sensors.requestTemperatures();
-  
   Serial.print("Inside  temperature is: ");
   printTemperature(insideThermometer);
   Serial.print("\n\r");
@@ -272,6 +260,13 @@ void setup() {
   int inside_tempC = sensors.getTempC(insideThermometer);
   int inside_tempF = DallasTemperature::toFahrenheit(inside_tempC);
   int temp_avg = (outside_tempF + inside_tempF)/2;
+
+  if (temp_avg > desired_temperature){
+    digitalWrite(temp_relay_switch, HIGH);
+  }
+  else{
+    digitalWrite(temp_relay_switch, LOW);
+  }
   //number 2 is indoo
   //int indoor = tempC;
   Serial.print("\n\r");
@@ -284,9 +279,12 @@ void setup() {
 
 //temperature readings CHECK
     //average the 2 temperature readings into one DONE
-//relay control for light
-//relay control for temperature control pad
+//relay control for light- wait for v2
+//relay control for temperature control pad -relay added
 //code to read soil sensor
 //code for the LEDS CHECK but need to edit input pins for the LEDS
+
+
+
 
 
