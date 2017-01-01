@@ -1,143 +1,113 @@
-//  This Arduino sketch reads DS18B20 "1-Wire" digital
-//  temperature sensors.
-//  Copyright (c) 2010 Mark McComb, hacktronics LLC
-//  License: http://www.opensource.org/licenses/mit-license.php (Go crazy)
-//  Tutorial:
-//  http://www.hacktronics.com/Tutorials/arduino-1-wire-tutorial.html
 
+
+
+/*
+ * written by mz
+ * the goal of this script is to accomplish the following tasks
+ * 3 lights signifiying if device is:
+ *    connected to internet
+ *    connected to the server
+ *    currently growing/in progress
+ *    
+ *additionally, simply change a heat pad on and off based on the current required temperature.
+ *    if it needs to be higher, make it higher
+ * 
+ * connect to wifi
+ * TODO let users connect to wifi themselves
+ * 
+ * 
+ * subscribe to the server
+ * subscribe to temperature readings
+ * publish their current conditions to a new server to store their data, 
+ * 
+ * compare the results of the guiding temp to what actually happened (server side)
+ * 
+ * 
+ */
+
+ #include <PubSubClient.h>
+#include <ESP8266WiFi.h>
+#include <ArduinoJson.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
-#include <ESP8266WiFi.h>
-#include <PubSubClient.h>
-#include "DHT.h"
+
+//nodeMCU pins we can use - 5,4,2, 14,12,13,15,3,1,10,9
+
+int light1_on_indicator = 5;
+//int light1_off_indicator =4;
+////////////
+int light2_wifi_connected_indicator =2;
+int light2_wifi_not_connected_indicator =14;
+////////////
+int light3_growing_progress_on_light =12;
+int light3_growing_progress_off_light =13;
+/////////
+int light4_mqtt_on_light = 12; // green
+int light4_mqtt_off_light = 131; // red
+///////////////
 
 
-
-//COMMENT WHERE DHTGOES
-#define DHTPIN 2     // what digital pin we're connected to
-
-// Uncomment whatever type you're using!
-#define DHTTYPE DHT11   // DHT 11
-
-DHT dht(DHTPIN, DHTTYPE);
-
+int temp_relay_switch = 15;
+int current_temperature=77;
+int desired_temperature=77;
 // Data wire is plugged into pin 5 on the Arduino
-#define ONE_WIRE_BUS 5
+/////////////////////////////////
+int ONE_WIRE_BUS= 9;
 
+//WIFI AND SERVER CREDs
+const char* ssid = "Verizon-SCH-I545-4A6B";
+const char* password = "qama598#";
+char* topic = "temp";     //  using wildcard to monitor all traffic from mqtt server
+char* topic_outbound = "catcher";
+char* server = "104.236.210.175";  // Address of my server on my network, substitute yours!
+char message_buff[100];   // initialise storage buffer (i haven't tested to this capacity.)
+int message_to_print = 76;
+int current_temp = 74;
+int desired_temp;
 
+int DeviceID = 0001;  
 
-//#define wifi_ssid "9a8fc8" //fill this
-//#define wifi_password "278993750" //fill this
+//this is for the json parsing
 
-#define wifi_ssid "Verizon-SCH-I545-4A6B" //fill this
-#define wifi_password "qama598#" //fill this
-#define mqtt_server "104.236.210.175" //fill this
-#define mqtt_user "" // no fill necessary
-#define mqtt_password "" // no fill necessary
-//#define topic1 "temp/temp1"
-#define topic1 "temp"
-#define mqtt_client_name "d123" //this needs to be unique for each unit
-WiFiClient espClient;
-PubSubClient client(espClient);
+const char* temperature = "";
+const char* humidity = "";
+const char* sensor3 = "";
+const char* sensor4 = "";
 
-
-
-
-
-// Setup a oneWire instance to communicate with any OneWire devices
+String pin = "";
+// Setup a oneWire instance to communicate with any OneWire devices 
+// (not just Maxim/Dallas temperature ICs)
 OneWire oneWire(ONE_WIRE_BUS);
-
-// Pass our oneWire reference to Dallas Temperature. 
+// Pass our oneWire reference to Dallas Temperature.
 DallasTemperature sensors(&oneWire);
+//this allows the esp to parse the json
 
+WiFiClient wifiClient;
 
-
-
-
-int sensorID = 001;
-int environment = 1;
-String table_direction = "temp_info";
-
-
-// Assign the unique addresses of your 1-Wire temp sensors.
-// See the tutorial on how to obtain these addresses:
-// http://www.hacktronics.com/Tutorials/arduino-1-wire-address-finder.html
 
 DeviceAddress insideThermometer = { 0x28, 0x82, 0xA5, 0xDD, 0x06, 0x00, 0x00, 0x36 };
 DeviceAddress outsideThermometer = { 0x28, 0x91, 0x37, 0xDD, 0x06, 0x00, 0x00, 0x00 };
-//DeviceAddress dogHouseThermometer = { 0x28, 0x59, 0xBE, 0xDF, 0x02, 0x00, 0x00, 0x9F };
+
+StaticJsonBuffer<200> jsonBuffer;
 
 
+void light_on_off(int pin){
+      digitalWrite(pin, LOW);
+      delay(300);
+       digitalWrite(pin, HIGH);
+      delay(300);
+      digitalWrite(pin, LOW);
+      delay(300);
+      digitalWrite(pin, HIGH);
+      delay(300);
+      digitalWrite(pin, LOW);
+      delay(300);
+      digitalWrite(pin, HIGH);
+      delay(300);
+      digitalWrite(pin, LOW);
+      delay(300);
+      digitalWrite(pin, HIGH);
 
-
-void setup_wifi() {
-    delay(10);
-    // We start by connecting to a WiFi network
-    Serial.println();
-    Serial.print("Connecting to ");
-    Serial.println(wifi_ssid);
-    WiFi.begin(wifi_ssid, wifi_password);
-    while (WiFi.status() != WL_CONNECTED) {
-        delay(500);
-        Serial.print(".");
-    }
-    Serial.println("");
-    Serial.println("WiFi connected");
-    Serial.println("IP address: ");
-    Serial.println(WiFi.localIP());
-}
-void reconnect() {
-    // Loop until we're reconnected
-    while (!client.connected()) {
-        Serial.print("Attempting MQTT connection...");
-        // Attempt to connect
-        if (client.connect(mqtt_client_name)) { //* See //NOTE below
-            Serial.println("connected");
-        } else {
-            Serial.print("failed, rc=");
-            Serial.print(client.state());
-            Serial.println(" try again in 5 seconds");
-            // Wait 5 seconds before retrying
-            delay(5000);
-        }
-    }
-}
-
-
-
-
-void pubMQTT(String topic,String topic_val){
-    Serial.print("Newest topic " + topic + " value:");
-    Serial.println(String(topic_val).c_str());
-    client.publish(topic.c_str(), String(topic_val).c_str(), true);
-}
-
-
-
-
-
-
-
-
-
-
-void setup(void)
-{
-
-  setup_wifi();
-  client.setServer(mqtt_server, 1883);
-  // start serial port
-  
-  Serial.begin(9600);
-  pinMode(A0, INPUT);
-  
-  // Start up the library
-  sensors.begin();
-  // set the resolution to 10 bit (good enough?)
-  sensors.setResolution(insideThermometer, 10);
-  sensors.setResolution(outsideThermometer, 10);
-  //sensors.setResolution(dogHouseThermometer, 10);
-  dht.begin();
 }
 
 void printTemperature(DeviceAddress deviceAddress)
@@ -153,25 +123,143 @@ void printTemperature(DeviceAddress deviceAddress)
   }
 }
 
-void loop(void)
-{ 
-    if (!client.connected()) {
-    reconnect();
+void callback(char* topic, byte* payload, unsigned int length) {
+  // Here is what i have been using to handle subscriptions. I took it as a snippet from elsewhere but i cannot credit author as i dont have reference!
+    int i = 0;
+      //blink the green light signifying that a message has been received
+    light_on_off(light4_mqtt_on_light);
+    
+  Serial.println("Message arrived:  topic: " + String(topic));
+  Serial.println("Length: " + String(length,DEC));
+  // create character buffer with ending null terminator (string)
+  for(i=0; i<length; i++) {
+    message_buff[i] = payload[i];
   }
-  client.loop();
+  message_buff[i] = '\0';
   
-  delay(2000);
-  Serial.print("Getting temperatures...\n\r");
+  String msgString = String(message_buff);
+  
+  Serial.println("Payload: " + msgString);
+  int state = digitalRead(2);  // get the current state of GPIO1 pin
+  Serial.println(message_to_print);
+
+///here is where we will parse the json message that's being received to update all variables once a message is received
+  JsonObject& root = jsonBuffer.parseObject(msgString);
+
+  const char* desired_temperature = root["desired_temperature"];
+  //const char* humidity = root["humidity"];
+  //const char* light = root["light"];
+  const char* progress_flag = root["progress_flag"];
+ // Serial.println(root);
+  //Serial.println("test");
+  Serial.println(desired_temperature);
+  //Serial.println(humidity);
+  //Serial.println(light);
+  Serial.println(progress_flag);
+
+  //flag 1 signifies that there is currently a grow cycle in progress
+
+  if(progress_flag == "1"){
+    digitalWrite(light3_growing_progress_on_light,HIGH);
+    digitalWrite(light3_growing_progress_off_light,LOW);
+  }
+
+  //flag 0 signifies that there is currently no grow cycle in progress
+  if (progress_flag == "0"){
+    digitalWrite(light3_growing_progress_on_light,LOW);
+    digitalWrite(light3_growing_progress_off_light,HIGH);
+  }
+       
+}
+
+PubSubClient client(server, 1883, callback, wifiClient);
+ 
+String macToStr(const uint8_t* mac)
+{
+  String result;
+  for (int i = 0; i < 6; ++i) {
+    result += String(mac[i], 16);
+    if (i < 5)
+      result += ':';
+  }
+  return result;
+}
+
+
+void setup() {
+  Serial.begin(9600);
+  delay(10);
+  
+
+    pinMode(light1_on_indicator, OUTPUT);
+    pinMode(light2_wifi_connected_indicator, OUTPUT);
+    pinMode(light2_wifi_not_connected_indicator, OUTPUT);
+    pinMode(light3_growing_progress_on_light, OUTPUT);
+    pinMode(light3_growing_progress_off_light,OUTPUT);
+    pinMode(temp_relay_switch, OUTPUT);
+    pinMode(light4_mqtt_on_light, OUTPUT); // green
+    pinMode(light4_mqtt_off_light, OUTPUT); // red
+    pinMode(temp_relay_switch, OUTPUT);
+//turning all the off indicators to high and turning all the on indicators to low
+
+    digitalWrite(light1_on_indicator, HIGH);
+    digitalWrite(light2_wifi_not_connected_indicator, HIGH);
+    digitalWrite(light3_growing_progress_off_light,HIGH);
+    digitalWrite(light4_mqtt_off_light,HIGH);
+            /////////
+    digitalWrite(light2_wifi_connected_indicator,LOW);
+    digitalWrite(light3_growing_progress_on_light,LOW);
+    digitalWrite(light4_mqtt_on_light,LOW);
+    digitalWrite(temp_relay_switch, LOW);
+            /////////
+
+  Serial.println();
+  Serial.println();
+  Serial.print("Connecting to ");
+  Serial.println(ssid);
+  StaticJsonBuffer<200> jsonBuffer;
+
+
+
+  
+  WiFi.begin(ssid, password);
+
+  //while the wifi is not connected, make the light red, otherwise make the light green
+  
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+     digitalWrite(light2_wifi_not_connected_indicator, LOW);
+     light_on_off(light2_wifi_connected_indicator);
+  Serial.println("");
+  Serial.println("WiFi connected");  
+  Serial.println("IP address: ");
+  Serial.println(WiFi.localIP());
+ 
+  //  connection to broker script.
+  if (client.connect("arduinoClient")) {
+    light_on_off(light4_mqtt_on_light);
+    //TODO change these
+    //////////////////////
+   Serial.print("Getting temperatures...\n\r");
   sensors.requestTemperatures();
-  
   Serial.print("Inside  temperature is: ");
   printTemperature(insideThermometer);
   Serial.print("\n\r");
   Serial.print("Outside temperature is: ");
-  float outside_tempC = sensors.getTempC(outsideThermometer);
-  float outside_tempF = DallasTemperature::toFahrenheit(outside_tempC);
-  float inside_tempC = sensors.getTempC(insideThermometer);
-  float inside_tempF = DallasTemperature::toFahrenheit(inside_tempC);
+  int outside_tempC = sensors.getTempC(outsideThermometer);
+  int outside_tempF = DallasTemperature::toFahrenheit(outside_tempC);
+  int inside_tempC = sensors.getTempC(insideThermometer);
+  int inside_tempF = DallasTemperature::toFahrenheit(inside_tempC);
+  int temp_avg = (outside_tempF + inside_tempF)/2;
+
+  if (temp_avg > desired_temperature){
+    digitalWrite(temp_relay_switch, HIGH);
+  }
+  else{
+    digitalWrite(temp_relay_switch, LOW);
+  }
   //number 2 is indoo
   //int indoor = tempC;
   Serial.print("\n\r");
@@ -179,79 +267,43 @@ void loop(void)
   //printTemperature(dogHouseThermometer);
   Serial.print("\n\r\n\r");
 
-  
-  int humidityRaw = analogRead(A0);
-  int moisture = map(humidityRaw,1023,0,0,100);
+  int soil_level = analogRead(0);
+  Serial.println(soil_level);
 
-  Serial.println("Wetness");
-  Serial.println(moisture);
+    String message_to_send2 = String("{\"DeviceID\":") +  
+    String(DeviceID) + 
+    ", \"Temp\":" + temp_avg +
+    ", \"Soil_Moisture\":" + soil_level +
+    "\"" + "}"; 
 
-////////////////////////////////////////////////////////////
-  delay(2000);
+    //need to convert the string we build above into const char so that mqtt pub function will take in that value
+    const char* pubmessage = message_to_send2.c_str();
 
-  // Reading temperature or humidity takes about 250 milliseconds!
-  // Sensor readings may also be up to 2 seconds 'old' (its a very slow sensor)
-  float h = dht.readHumidity();
-  // Read temperature as Celsius (the default)
-  float t = dht.readTemperature();
-  // Read temperature as Fahrenheit (isFahrenheit = true)
-  float f = dht.readTemperature(true);
-
-  // Check if any reads failed and exit early (to try again).
- if (isnan(h) || isnan(t) || isnan(f)) {
-   Serial.println("Failed to read from DHT sensor!");
-    //return;
+//    client.publish(topic,message_to_send2);
+///////////////
+    //client.publish("topic_outbound","hello world");
+        client.publish(topic_outbound,pubmessage);
+    client.subscribe(topic);   //i should probably just point this to the varialbe above.
   }
+}
 
-    // Compute heat index in Fahrenheit (the default)
-  float hif = dht.computeHeatIndex(f, h);
-  // Compute heat index in Celsius (isFahreheit = false)
-  float hic = dht.computeHeatIndex(t, h, false);
-
-  Serial.print("Humidity: ");
-  Serial.print(h);
-  Serial.print(" %\t");
-  Serial.print("Temperature: ");
-  Serial.print(t);
-  Serial.print(" *C ");
-  Serial.print(f);
-  Serial.print(" *F\t");
-  Serial.print("Heat index: ");
-  Serial.print(hic);
-  Serial.print(" *C ");
-  Serial.print(hif);
-  Serial.println(" *F");
-
-//////////////////////////////////////////////////
-
-
-  String message_to_send1 = String("{\"Environment\":") +  
-    String(environment) + 
-    ", \"IndoorTemp\":" + inside_tempF +
-    ", \"Soil_Moisture\":" + moisture +
-    ", \"OutdoorTemp\":" + outside_tempF +
-    ", \"Humidity\":" + String(0) +
-    ",\"Table_Direction\":" + "\"" + table_direction +
-    "\"" + "}";   
-
-    
-  String message_to_send2 = String("{\"Environment\":") +  
-    String(environment) + 
-    ", \"InTemp\":" + inside_tempF +
-    ", \"Soil\":" + moisture +
-    ", \"OutTemp\":" + outside_tempF +
-    ", \"ID\":" + sensorID +
-    ", \"Hum\":" + String(0) + ",\"TD\":" + "\"" + table_direction +
-    "\"" + "}";   
-
-                                                             
-
-  Serial.println(message_to_send2);
-  delay(10);
-  //pubMQTT(topic1, String(message_to_send1));
-  //pubMQTT(topic1, String("hi"));
-  pubMQTT(topic1, message_to_send2);
- 
-  delay(50000);
+  // put your main code here, to run repeatedly:
+  void loop() {
+  client.loop();
+  Serial.println(message_to_print);
+  delay(1000);
+  ////////////
   
 }
+
+
+//temperature readings CHECK
+    //average the 2 temperature readings into one DONE
+//relay control for light-
+//    wait for v2
+//relay control for temperature control pad -relay added
+//code to read soil sensor
+//code for the LEDS CHECK but need to edit input pins for the LEDS
+
+
+
