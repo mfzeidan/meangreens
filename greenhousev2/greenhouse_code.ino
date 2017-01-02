@@ -1,6 +1,7 @@
 
 
 
+
 /*
  * written by mz
  * the goal of this script is to accomplish the following tasks
@@ -36,7 +37,7 @@
 int light1_on_indicator = 5;
 //int light1_off_indicator =4;
 ////////////
-int light2_wifi_connected_indicator =2;
+int light2_wifi_connected_indicator =4;
 int light2_wifi_not_connected_indicator =14;
 ////////////
 int light3_growing_progress_on_light =12;
@@ -47,22 +48,25 @@ int light4_mqtt_off_light = 131; // red
 ///////////////
 
 
-int temp_relay_switch = 15;
+int temp_relay_switch = 13;
 int current_temperature=77;
 int desired_temperature=77;
 // Data wire is plugged into pin 5 on the Arduino
 /////////////////////////////////
-int ONE_WIRE_BUS= 9;
+int ONE_WIRE_BUS= 0;
 
 //WIFI AND SERVER CREDs
-const char* ssid = "Verizon-SCH-I545-4A6B";
-const char* password = "qama598#";
+const char* ssid = "XPX7B";
+const char* password = "HCMLTGNWPFBLH9MB";
 char* topic = "temp";     //  using wildcard to monitor all traffic from mqtt server
+char* topic_outbound = "catcher";
 char* server = "104.236.210.175";  // Address of my server on my network, substitute yours!
 char message_buff[100];   // initialise storage buffer (i haven't tested to this capacity.)
-int message_to_print = 76;
+int message_to_print = 176;
 int current_temp = 74;
 int desired_temp;
+
+int DeviceID = 0001;  
 
 //this is for the json parsing
 
@@ -82,8 +86,8 @@ DallasTemperature sensors(&oneWire);
 WiFiClient wifiClient;
 
 
-DeviceAddress insideThermometer = { 0x28, 0x82, 0xA5, 0xDD, 0x06, 0x00, 0x00, 0x36 };
-DeviceAddress outsideThermometer = { 0x28, 0x91, 0x37, 0xDD, 0x06, 0x00, 0x00, 0x00 };
+//DeviceAddress insideThermometer = { 0x28, 0x82, 0xA5, 0xDD, 0x06, 0x00, 0x00, 0x36 };
+//DeviceAddress outsideThermometer = { 0x28, 0x91, 0x37, 0xDD, 0x06, 0x00, 0x00, 0x00 };
 
 StaticJsonBuffer<200> jsonBuffer;
 
@@ -138,7 +142,7 @@ void callback(char* topic, byte* payload, unsigned int length) {
   
   Serial.println("Payload: " + msgString);
   int state = digitalRead(2);  // get the current state of GPIO1 pin
-  Serial.println(message_to_print);
+  //Serial.println(message_to_print);
 
 ///here is where we will parse the json message that's being received to update all variables once a message is received
   JsonObject& root = jsonBuffer.parseObject(msgString);
@@ -238,7 +242,38 @@ void setup() {
   if (client.connect("arduinoClient")) {
     light_on_off(light4_mqtt_on_light);
     //TODO change these
-    //client.publish("outTopic","hello world");
+    //////////////////////
+   Serial.print("Getting temperatures...\n\r");
+  sensors.requestTemperatures();
+    Serial.print("Temperature for Device 1 is: ");
+  Serial.print(sensors.getTempFByIndex(0));
+
+
+
+
+  //number 2 is indoo
+  //int indoor = tempC;
+  Serial.print("\n\r");
+  //Serial.print("Dog House temperature is: ");
+  //printTemperature(dogHouseThermometer);
+  Serial.print("\n\r\n\r");
+
+  int soil_level = analogRead(0);
+  Serial.println(soil_level);
+
+    String message_to_send2 = String("{\"DeviceID\":") +  
+    String(DeviceID) + 
+    //", \"Temp\":" + temp_avg +
+    ", \"Soil_Moisture\":" + soil_level +
+    "\"" + "}"; 
+
+    //need to convert the string we build above into const char so that mqtt pub function will take in that value
+    const char* pubmessage = message_to_send2.c_str();
+
+//    client.publish(topic,message_to_send2);
+///////////////
+    //client.publish("topic_outbound","hello world");
+        client.publish(topic_outbound,pubmessage);
     client.subscribe(topic);   //i should probably just point this to the varialbe above.
   }
 }
@@ -246,43 +281,43 @@ void setup() {
   // put your main code here, to run repeatedly:
   void loop() {
   client.loop();
-  Serial.println(message_to_print);
+  //Serial.println(message_to_print);
   delay(1000);
-  ////////////
-  Serial.print("Getting temperatures...\n\r");
+     Serial.print("Getting temperatures...\n\r");
   sensors.requestTemperatures();
-  Serial.print("Inside  temperature is: ");
-  printTemperature(insideThermometer);
-  Serial.print("\n\r");
-  Serial.print("Outside temperature is: ");
-  int outside_tempC = sensors.getTempC(outsideThermometer);
-  int outside_tempF = DallasTemperature::toFahrenheit(outside_tempC);
-  int inside_tempC = sensors.getTempC(insideThermometer);
-  int inside_tempF = DallasTemperature::toFahrenheit(inside_tempC);
-  int temp_avg = (outside_tempF + inside_tempF)/2;
+    Serial.print("Temperature for Device 1 is: ");
+    int current_temp = sensors.getTempFByIndex(0);
+  Serial.println(sensors.getTempFByIndex(0));
+  
+  ////////////
+  Serial.println("current temps");
+  Serial.println(current_temp);
+  Serial.println("desired temp");
+  Serial.println(desired_temperature);
+  Serial.println("-----------------");
 
-  if (temp_avg > desired_temperature){
-    digitalWrite(temp_relay_switch, HIGH);
+
+  if(current_temp > desired_temperature){
+      Serial.println("relay high");
+      digitalWrite(temp_relay_switch, HIGH);
   }
   else{
-    digitalWrite(temp_relay_switch, LOW);
+      Serial.println("relay low");
+      digitalWrite(temp_relay_switch, LOW);
   }
-  //number 2 is indoo
-  //int indoor = tempC;
-  Serial.print("\n\r");
-  //Serial.print("Dog House temperature is: ");
-  //printTemperature(dogHouseThermometer);
-  Serial.print("\n\r\n\r");
   
 }
 
 
 //temperature readings CHECK
     //average the 2 temperature readings into one DONE
-//relay control for light- wait for v2
+//relay control for light-
+//    wait for v2
 //relay control for temperature control pad -relay added
 //code to read soil sensor
 //code for the LEDS CHECK but need to edit input pins for the LEDS
+
+
 
 
 
