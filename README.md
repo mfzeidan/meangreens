@@ -1,2 +1,2 @@
 # meangreens
-code to help efficently grow microgreens :D
+code to help efficiently grow microgreens :D
