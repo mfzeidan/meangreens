@@ -5,7 +5,7 @@ import datetime
 from pytz import timezone
 
 
-def scan_old_emails(email,timeframe):
+def scan_old_emails(timeframe):
 
 	print datetime.datetime.now().strftime("%s")
 
@@ -48,6 +48,4 @@ def scan_old_emails(email,timeframe):
 email = 'mfzeidan@gmail.com'
 #scan_emails(email)
 
-scan_old_emails("mfz",15)
-
-
+scan_old_emails(15)
