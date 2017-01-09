@@ -8,6 +8,12 @@
 #include <OneWire.h>
 #include <DallasTemperature.h>
 int deviceID = 443;
+
+// I think this gpio pins should work but I need to double check
+// note remember a 220ohm resistor
+
+int green_light = 14;
+int red_light = 12;
  
 #define wifi_ssid "XPX7B"
 #define wifi_password "HCMLTGNWPFBLH9MB"
@@ -72,21 +78,38 @@ void pubMQTT(String topic,String topic_val){
     Serial.print("Newest topic " + topic + " value:");
     Serial.println(String(topic_val).c_str());
     client.publish(topic.c_str(), String(topic_val).c_str(), true);
+    blink_lights(green_light,3);
 }
 
+//added a blinking function to let users call
+// note need to pass in light input and the amount of times you want it to blink
+void blink_lights(int light, int counter){
+ int i;
+ for(i = 0; i < counter; i++){
+  digitalWrite(light, HIGH);   // turn the LED on (HIGH is the voltage level)
+  delay(500);                       // wait for a second
+  digitalWrite(light, LOW);    // turn the LED off by making the voltage LOW
+  delay(500);
+ }  
+}
 
 
  
 void setup() {
    setup_wifi();
   client.setServer(mqtt_server, 1883);
-  Serial.begin(9600); 
+ 
+   pinMode(green_light, OUTPUT);
+   pinMode(red_light, OUTPUT);
+ 
+   Serial.begin(9600); 
 }
 
  
 void loop() {
     //reconnect if wifi drops
     if (!client.connected()) {
+      blink_lights(red_light,3);
     reconnect();
   }
    client.loop();
