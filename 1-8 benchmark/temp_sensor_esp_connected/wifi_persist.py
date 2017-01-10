@@ -12,12 +12,7 @@ int deviceID = 4411;
 #define WIFI_SSID           "Verizon-SCH-I545-4A6B"
 #define WIFI_PASSWORD       "qama598#"
 
-#define SERVER_IP           "10.1.20.200"
-#define SERVER_PORT         9091
-
 #define MAX_LOOP_TIME_MS     10000
-
-
 #define mqtt_server "104.236.210.175" //fill this
 #define mqtt_user "" // no fill necessary
 #define mqtt_password "" // no fill necessary
@@ -28,6 +23,11 @@ int deviceID = 4411;
 Ticker sleepTicker;
 char current_temp[32];
 
+//sleeptimes is a variable that converts the deep sleep to seconds. 
+//setting this variable to 10 sets the deepsleep cycle to 10 seconds
+
+int sleepTimeS = 100;
+
 //set the temp wire input here
 #define ONE_WIRE_BUS 4
 OneWire oneWire(ONE_WIRE_BUS);
@@ -35,9 +35,10 @@ DallasTemperature sensors(&oneWire);
 WiFiClient espClient;
 PubSubClient client(espClient);
 
-
 unsigned long startTime;
 
+
+//this sets the device to sleep regardless if a connection is made or not
 void sleepyTime() {
   const int elapsed = millis() - startTime;
   Serial.println(millis());
@@ -48,7 +49,8 @@ void sleepyTime() {
   if (elapsed >= MAX_LOOP_TIME_MS) {
     WiFi.disconnect();
   }
-  ESP.deepSleep(1000000, WAKE_RF_DEFAULT);
+  ESP.deepSleep(sleepTimeS * 1000000); 
+  
   // It can take a while for the ESP to actually go to sleep.
   // When it wakes up we start again in setup().
   delay(5000);
@@ -82,7 +84,7 @@ void reconnect() {
             Serial.print(client.state());
             Serial.println(" try again in 5 seconds");
             // Wait 5 seconds before retrying
-            delay(5000);
+            delay(500);
         }
     }
 }
@@ -133,16 +135,10 @@ void pubMQTT(String topic,String topic_val){
 
 void loop(void)
 {
-
-  
     if (!client.connected()) {
-
     reconnect();
   }
    client.loop();
-
-
-  
   Serial.println("beginning");                         
   const int bmeTime = millis() - startTime;
   Serial.printf("BME read took %d ms\n", bmeTime);
@@ -159,32 +155,27 @@ void loop(void)
   Serial.print("Temperature for Device 1 is: ");
   Serial.println(sensors.getTempFByIndex(0)); // 
   float temp_float = sensors.getTempFByIndex(0);
-
   //need to convert temperature character type so that it works in pubMQTT
-
   String temperature = dtostrf(temp_float, 4, 0, current_temp);
   String stringOne = "Hello!       ";
   Serial.println(stringOne);
-
    stringOne.trim();
   Serial.print(stringOne);
   //Serial.println(temperature.trim());
 
     temperature.trim();
+    
  String message_to_send1 = String("{\"devID\":") +  
     String(deviceID) + 
     ", \"current_temp\":" + temperature +
      + "}";  
 
     Serial.println(message_to_send1);
-  
   Serial.println("simulate deepsleep here");
   Serial.println(deviceID);
   Serial.println(temperature);
-  
   pubMQTT(topic1, message_to_send1);
   Serial.println("off to sleep i go");
-  ESP.deepSleep(1000000,WAKE_RF_DEFAULT);
   delay(100);
   Serial.println("this shouldnt print");
   sleepyTime();
