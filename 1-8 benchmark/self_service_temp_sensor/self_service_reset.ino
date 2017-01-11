@@ -33,11 +33,42 @@ int switch_pin = 3;
 unsigned long startTime;
 char current_temp[32];
 
+int green_light = 1;
+int red_light = 2;
+int cant_connect_flag = 0;
+
+//set a specific counter to guage how long the device should sleep
+//the device should sleep the longest once it successfully connects to wifi
+//the device should sleep long if it successfully publishes a message
+int device_counter;
+
+void sleep_selection(int device_counter){
+  if(device_counter == 1){
+    ESP.deepSleep(sleepTimeS * 1000000);  
+    delay(100);
+  }
+    if(device_counter == 2){
+    ESP.deepSleep(sleepTimeS * 1000000); 
+    delay(100); 
+  }
+    if(device_counter == 3){
+    ESP.deepSleep(sleepTimeS * 1000000);  
+    delay(100);
+  }
+  else{
+    ESP.deepSleep(sleepTimeS * 1000000);  
+    delay(100);
+  }
+}
+
+
 
 void pubMQTT(String topic,String topic_val){
     Serial.print("Newest topic " + topic + " value:");
     Serial.println(String(topic_val).c_str());
     client.publish(topic.c_str(), String(topic_val).c_str(), true);
+
+    blink_lights(green_light,1);
 }
 
 void sleepyTime() {
@@ -51,6 +82,17 @@ void sleepyTime() {
   // It can take a while for the ESP to actually go to sleep.
   // When it wakes up we start again in setup().
   delay(5000);
+}
+
+
+void blink_lights(int light, int counter){
+ int i;
+ for(i = 0; i < counter; i++){
+  digitalWrite(light, HIGH);   // turn the LED on (HIGH is the voltage level)
+  delay(500);                       // wait for a second
+  digitalWrite(light, LOW);    // turn the LED off by making the voltage LOW
+  delay(500);
+ }  
 }
 
 
@@ -83,18 +125,21 @@ void setup() {
   if (!wifiManager.autoConnect("AutoConnectAP", "password")) {
     Serial.println("failed to connect, we should reset as see if it connects");
     delay(3000);
+    blink_lights(red_light,2);
     //ESP.reset();
     //  delay(5000);
   }
   //note that if this completes, the devie needs to reset. put in a longer deepsleep to give the user time to flip the switch back
-
-    ESP.deepSleep(1000000,WAKE_RF_DEFAULT);
-
-  }
-  //if you get here you have connected to the WiFi
   Serial.println("connected...yeey :)");
   Serial.println("local ip");
   Serial.println(WiFi.localIP());
+  blink_lights(green_light,1);
+  ESP.deepSleep(1000000,WAKE_RF_DEFAULT);
+  delay(100);
+
+  }
+  //if you get here you have connected to the WiFi
+
   client.setServer(mqtt_server, 1883);
 }
 
@@ -112,10 +157,15 @@ void reconnect() {
             Serial.println("connected");
         } else {
             Serial.print("failed, rc=");
+           
+            cant_connect_flag += 1;
+               Serial.println("cant connect flag");
+            Serial.println(cant_connect_flag);  
+            blink_lights(red_light,1);
             Serial.print(client.state());
             Serial.println(" try again in 5 seconds");
             // Wait 5 seconds before retrying
-            delay(5000);
+            delay(2000);
         }
     }
 }
@@ -123,7 +173,10 @@ void reconnect() {
 
 
 
+
 void loop() {
+
+  
       //reconnect if wifi drops
       startTime = millis();
       sleepTicker.once_ms(12000, &sleepyTime);
@@ -163,7 +216,7 @@ void loop() {
   Serial.println(temperature);
   
   pubMQTT(topic1, message_to_send1);
-  Serial.println("off to sleep i go");
-  delay(100);
-  Serial.println("this shouldnt print");
+  //if it gets down to here, put the device directly to sleep
+    ESP.deepSleep(sleepTimeS * 1000000);  
+    delay(100);
 }
