@@ -9,6 +9,7 @@
 #include <PubSubClient.h>
 #include <OneWire.h>
 #include <DallasTemperature.h>
+#include <Ticker.h>
 
 #define mqtt_server "104.236.210.175" //fill this
 #define mqtt_user "" // no fill necessary
@@ -16,7 +17,9 @@
 //#define topic1 "temp/temp1"
 #define topic1 "esp_temp_test3"
 #define mqtt_client_name "d1234" //dont change
-
+#define MAX_LOOP_TIME_MS     10000
+Ticker sleepTicker;
+int sleepTimeS = 10;
 
 //set the temp wire input here
 #define ONE_WIRE_BUS 4
@@ -27,14 +30,30 @@ PubSubClient client(espClient);
 
 int deviceID = 443;
 int switch_pin = 3;
-
+unsigned long startTime;
 char current_temp[32];
+
 
 void pubMQTT(String topic,String topic_val){
     Serial.print("Newest topic " + topic + " value:");
     Serial.println(String(topic_val).c_str());
     client.publish(topic.c_str(), String(topic_val).c_str(), true);
 }
+
+void sleepyTime() {
+  const int elapsed = millis() - startTime;
+  Serial.println(millis());
+  Serial.println(startTime);
+  Serial.printf("Sleeping. Loop took %d ms\n", elapsed);
+  if (elapsed >= MAX_LOOP_TIME_MS) {
+    ESP.deepSleep(sleepTimeS * 1000000);  
+  }
+  // It can take a while for the ESP to actually go to sleep.
+  // When it wakes up we start again in setup().
+  delay(5000);
+}
+
+
 
 void setup() {
   // put your setup code here, to run once:
@@ -44,17 +63,19 @@ void setup() {
   //Local intialization. Once its business is done, there is no need to keep it around
   WiFiManager wifiManager;
   //exit after config instead of connecting
-  wifiManager.setBreakAfterConfig(true);
+
   //reset settings - for testing
   ////
   pinMode(switch_pin, INPUT);
   Serial.println("SERIAL READ");
   Serial.println(digitalRead(switch_pin));
   digitalRead(switch_pin);
+  //switch_pin = 0;
   
   if(switch_pin = 0){
     wifiManager.resetSettings();
-  }
+      wifiManager.setBreakAfterConfig(true);
+  
   //tries to connect to last known settings
   //if it does not connect it starts an access point with the specified name
   //here  "AutoConnectAP" with password "password"
@@ -62,8 +83,13 @@ void setup() {
   if (!wifiManager.autoConnect("AutoConnectAP", "password")) {
     Serial.println("failed to connect, we should reset as see if it connects");
     delay(3000);
-    ESP.reset();
-    delay(5000);
+    //ESP.reset();
+    //  delay(5000);
+  }
+  //note that if this completes, the devie needs to reset. put in a longer deepsleep to give the user time to flip the switch back
+
+    ESP.deepSleep(1000000,WAKE_RF_DEFAULT);
+
   }
   //if you get here you have connected to the WiFi
   Serial.println("connected...yeey :)");
@@ -71,6 +97,10 @@ void setup() {
   Serial.println(WiFi.localIP());
   client.setServer(mqtt_server, 1883);
 }
+
+
+  
+  
 
 
 void reconnect() {
@@ -95,6 +125,8 @@ void reconnect() {
 
 void loop() {
       //reconnect if wifi drops
+      startTime = millis();
+      sleepTicker.once_ms(12000, &sleepyTime);
     if (!client.connected()) {
     reconnect();
   }
@@ -132,7 +164,6 @@ void loop() {
   
   pubMQTT(topic1, message_to_send1);
   Serial.println("off to sleep i go");
-  ESP.deepSleep(1000000,WAKE_RF_DEFAULT);
   delay(100);
   Serial.println("this shouldnt print");
 }
