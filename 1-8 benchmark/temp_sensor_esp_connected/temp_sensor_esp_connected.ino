@@ -15,8 +15,8 @@ int deviceID = 443;
 int green_light = 14;
 int red_light = 12;
  
-#define wifi_ssid "XPX7B"
-#define wifi_password "HCMLTGNWPFBLH9MB"
+#define wifi_ssid "****"
+#define wifi_password "******"
 
 #define mqtt_server "104.236.210.175" //fill this
 #define mqtt_user "" // no fill necessary
